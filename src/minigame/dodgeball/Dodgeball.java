@@ -2,7 +2,12 @@ package minigame.dodgeball;
 
 import java.util.logging.Logger;
 
+import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
+
+import minigame.dodgeball.object.DBPlayer;
+import minigame.dodgeball.object.DodgeballTeam;
 
 public class Dodgeball extends JavaPlugin{
 
@@ -11,6 +16,12 @@ public class Dodgeball extends JavaPlugin{
 	@Override
 	public void onEnable() {
 		plugin = this;
+		
+		DodgeballTeam.loadSavedTeams();
+		
+		for (Player player : Bukkit.getOnlinePlayers()) {
+			DBPlayer.loadPlayer(player);
+		}
 	}
 	
 	@Override
