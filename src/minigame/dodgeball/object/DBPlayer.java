@@ -4,7 +4,10 @@ import java.util.HashMap;
 
 import org.bukkit.entity.Player;
 
-public class DBPlayer {
+import minigame.dodgeball.storage.Serializer;
+import minigame.dodgeball.storage.StorageUtil;
+
+public class DBPlayer extends Serializer{
 	
 	private static HashMap<Player, DBPlayer> players = new HashMap<>();
 
@@ -13,9 +16,7 @@ public class DBPlayer {
 	private DodgeballTeam team;
 	
 	public DBPlayer(Player player, DodgeballTeam team) {
-		this.player = player;
-		this.team = team;
-		players.put(player, this);
+		super(StorageUtil.getJSONFile("/players/", player.getUniqueId().toString()));
 	}
 	
 	public static DBPlayer fromPlayer(Player player) {
