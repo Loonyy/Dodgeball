@@ -1,0 +1,4 @@
+name: Dodgeball
+main: minigame.dodgeball.Dodgeball
+version: ${project.version}
+authors: [Simplicitee, jedk1]

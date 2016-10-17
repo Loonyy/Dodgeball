@@ -8,22 +8,35 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
-import minigame.dodgeball.Dodgeball;
-import minigame.dodgeball.configuration.Config;
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
+import com.google.gson.annotations.Since;
 
-public class DodgeballTeam {
+import minigame.dodgeball.Dodgeball;
+import minigame.dodgeball.storage.Serializer;
+import minigame.dodgeball.storage.StorageUtil;
+
+public class DodgeballTeam extends Serializer {
 	
-	private static HashMap<String, DodgeballTeam> nameMap = new HashMap<>();
 	private static HashMap<UUID, DodgeballTeam> uuidMap = new HashMap<>();
 	
+	@SerializedName("name")
+	@Expose @Since(1.0)
 	private String name;
+	@SerializedName("color")
+	@Expose @Since(1.0)
 	private int[] color;
+	@SerializedName("uuid")
+	@Expose @Since(1.0)
 	private UUID uuid;
-	private List<Player> members = new ArrayList<>();
-	private Player leader;
+	@SerializedName("members")
+	@Expose @Since(1.0)
+	private List<UUID> members = new ArrayList<>();
+	@SerializedName("leader")
+	@Expose @Since(1.0)
+	private UUID leader;
 	
 	/**
 	 * Making a new team that doesn't already exist and only has a leader
@@ -31,50 +44,20 @@ public class DodgeballTeam {
 	 * @param color RGB int[] for color
 	 */
 	public DodgeballTeam(String name, int[] color, Player leader) {
-		this(name, color, UUID.randomUUID(), Arrays.asList(leader), leader);
+		this(name, color, UUID.randomUUID(), Arrays.asList(leader.getUniqueId()), leader);
 	}
 	
-	public DodgeballTeam(String name, int[] color, UUID uuid, List<Player> members, Player leader) {
+	public DodgeballTeam(String name, int[] color, UUID uuid, List<UUID> members, Player leader) {
+		super (StorageUtil.getJSONFile("/teams/", uuid.toString()));
 		this.name = name;
 		this.color = color;
 		this.uuid = uuid;
 		this.members = members;
-		this.leader = leader;
-		nameMap.put(name, this);
+		this.leader = leader.getUniqueId();
 		uuidMap.put(uuid, this);
+		serialize();
 	}
 
-	public static void loadSavedTeams() {
-		File folder = new File(Dodgeball.plugin().getDataFolder(), "teams");
-		if (!folder.exists()) {
-			folder.mkdirs();
-			return;
-		}
-		
-		for (File file : folder.listFiles()) {
-			Config c = new Config(folder, file);
-			String name = file.getName();
-			int[] color = new int[] {c.get().getInt("Red"), c.get().getInt("Green"), c.get().getInt("Blue")};
-			UUID uuid = UUID.fromString(c.get().getString("UUID"));
-			List<Player> members = new ArrayList<>();
-			Player leader = null;
-			
-			for (String uid : c.get().getStringList("Members")) {
-				String[] entry = uid.split(",");
-				UUID id = UUID.fromString(entry[0]);
-				Player player = Bukkit.getPlayer(id);
-				
-				members.add(player);
-				
-				if (entry[1].equalsIgnoreCase("Leader")) {
-					leader = player;
-				}
-			}
-			
-			new DodgeballTeam(name, color, uuid, members, leader);
-		}
-	}
-	
 	public String getName() {
 		return name;
 	}
@@ -87,37 +70,85 @@ public class DodgeballTeam {
 		return uuid;
 	}
 	
-	public Player getLeader() {
+	public UUID getLeader() {
 		return leader;
 	}
 	
-	public void setLeader(Player player) {
-		leader = player;
+	public void setLeader(UUID leader) {
+		this.leader = leader;
 	}
 	
-	public boolean isLeader(Player player) {
-		return (leader.getUniqueId() == player.getUniqueId());
+	public boolean isLeader(UUID leader) {
+		return this.leader.equals(leader);
 	}
 	
-	public List<Player> getMembers() {
+	public List<UUID> getMembers() {
 		return members;
 	}
 	
-	public void addMember(Player player) {
-		members.add(player);
-	}
-	
-	public void removeMember(Player player) {
-		if (members.contains(player)) {
-			members.remove(player);
+	public void addMember(UUID uuid) {
+		if (!members.contains(uuid)) {
+			members.add(uuid);
 		}
 	}
 	
-	public boolean isMember(Player player) {
-		return members.contains(player);
+	public void removeMember(UUID uuid) {
+		if (members.contains(uuid)) {
+			members.remove(uuid);
+		}
+	}
+	
+	public boolean isMember(UUID uuid) {
+		return members.contains(uuid);
+	}
+	
+	public void unload() {
+		serialize();
+		uuidMap.remove(uuid);
 	}
 	
 	public static Collection<DodgeballTeam> getAllTeams() {
-		return nameMap.values();
+		return uuidMap.values();
+	}
+	
+	/**
+	 * Gets an instance of a DodgeballTeam
+	 * @param uuid
+	 * @return
+	 */
+	public static DodgeballTeam get(UUID uuid) {
+		if (!uuidMap.containsKey(uuid)) {
+			DodgeballTeam team = (DodgeballTeam) Serializer.get(DodgeballTeam.class, StorageUtil.getJSONFile("/teams/", uuid.toString()));
+			if (team == null) {
+				return null;
+			}
+			uuidMap.put(uuid, team);
+		}
+		return uuidMap.get(uuid);
+	}
+	
+	/**
+	 * Loads all instances of saved DodgeballTeams
+	 */
+	public static void loadAll() {
+		File teamsFolder = new File(Dodgeball.plugin().getDataFolder() + File.separator + "teams");
+		if (!teamsFolder.exists()) {
+			return;
+		} else {
+			Arrays.asList(teamsFolder.list()).stream().filter(s -> s.endsWith(".json")).forEach(s -> {
+				s = s.replace(".json", "");
+				if (s.matches("[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}")) {
+					get(UUID.fromString(s));
+				}
+			});
+		}
+	}
+
+	/**
+	 * Unloads all the teams and saves them
+	 */
+	public static void unloadAll() {
+		uuidMap.values().stream().forEach(player -> player.serialize());
+		uuidMap.clear();
 	}
 }
