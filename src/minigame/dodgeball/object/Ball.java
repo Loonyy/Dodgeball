@@ -47,4 +47,9 @@ public class Ball {
 	public boolean isActive() {
 		return active;
 	}
+	
+	public static void destroyAll() {
+		balls.stream().forEach(ball -> ball.ball.remove());
+		balls.clear();
+	}
 }
