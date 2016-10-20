@@ -23,5 +23,10 @@ public class PlayerListener  implements Listener {
 		DBPlayer.get(event.getPlayer()).unload();
 	}
 	
+	@EventHandler
+	public void onThrow(PlayerAnimationEvent event) {
+		
+		
+	}
 
 }
